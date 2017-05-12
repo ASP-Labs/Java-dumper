@@ -1,5 +1,5 @@
 # Java-dumper
-Immunity Debugger python plugin, which provides to dump java classes from ROM via jvm processing.
+Immunity Debugger python plugin, which provides to dump java classes from ROM during jvm processing.
 
 ## Installation
 Move `java-dumper.py` to Immunity Debugger `PyCommands`-folder
