@@ -14,20 +14,20 @@ java-dumper project (for 32 bit executable files)
 
 MAGIC = binascii.unhexlify("CAFEBABE")
 
-CONSTANT_Class				= 7
-CONSTANT_Fieldref 			= 9
-CONSTANT_Methodref 			= 10
+CONSTANT_Class              = 7
+CONSTANT_Fieldref           = 9
+CONSTANT_Methodref          = 10
 CONSTANT_InterfaceMethodref = 11
-CONSTANT_String 			= 8
-CONSTANT_Integer 			= 3
-CONSTANT_Float 				= 4
-CONSTANT_Long 				= 5
-CONSTANT_Double 			= 6
-CONSTANT_NameAndType 		= 12
-CONSTANT_Utf8 				= 1
-CONSTANT_MethodHandle 		= 15
-CONSTANT_MethodType 		= 16
-CONSTANT_InvokeDynamic 		= 18
+CONSTANT_String             = 8
+CONSTANT_Integer            = 3
+CONSTANT_Float              = 4
+CONSTANT_Long               = 5
+CONSTANT_Double             = 6
+CONSTANT_NameAndType        = 12
+CONSTANT_Utf8               = 1
+CONSTANT_MethodHandle       = 15
+CONSTANT_MethodType         = 16
+CONSTANT_InvokeDynamic      = 18
 
 CLASS_MAX_SIZE = 65536
 
@@ -397,15 +397,15 @@ def init_hooks(imm, opts):
 
 
 def usage(imm):
-	imm.log("########## Immunity Debugger java dumper ##########		")
-	imm.log("!java-dumper	[options] [hooks]						    ")
-	imm.log("options:		-v 	-H						    			")
-	imm.log("              	-v	enable verbosity     					")
-	imm.log("			   	-H  heaps scan 								")
-	imm.log("hooks:			-c 	-r 	-C						    		")
-	imm.log("              	-c  checks CreateFileW calls               	")
-	imm.log("              	-r  checks ReadFile calls       			")
-	imm.log("              	-C  checks CloseHandle calls     			")
+	imm.log("########## Immunity Debugger java dumper ##########        ")
+	imm.log("!java-dumper   [options] [hooks]                           ")
+	imm.log("options:       -v -H                                       ")
+	imm.log("               -v    enable verbosity                      ")
+	imm.log("               -H    heaps scan                            ")
+	imm.log("hooks:         -c -r -C                                    ")
+	imm.log("               -c    checks CreateFileW calls              ")
+	imm.log("               -r    checks ReadFile calls                 ")
+	imm.log("               -C    checks CloseHandle calls              ")
 
 
 def main(args): 
