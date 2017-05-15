@@ -1,5 +1,6 @@
 import binascii 
 import immlib
+import getopt
 import random
 import struct
 from immlib import LogBpHook
@@ -28,11 +29,6 @@ CONSTANT_MethodType 		= 16
 CONSTANT_InvokeDynamic 		= 18
 
 CLASS_MAX_SIZE = 65536
-
-# Hook types
-create = 0
-read   = 1
-close  = 2
 
 # set random generator
 random.seed()
@@ -71,6 +67,7 @@ class java_class:
 
 	def generate_filename(self):
 		self.filename = strftime("%Y%m%d%H%M%S", gmtime()) + "_" + str(random.randint(0, 0xFFFFFFFF)) + ".class"
+		return
 
 	def create_class_file(self):
 		with open(self.filename, "wb") as file:
@@ -270,14 +267,13 @@ class java_class:
 		
 	def __str__(self):
 		result = ''
-		for field, value in self.body.items():
-			result += field + ' : ' + hex(value) + '\n'
-		result += self.cp_infos
+		for item in self.body:
+			result += item[0] + " : " + str(item[1])
 		return result
 
 
 class Hooker(LogBpHook):
-	def __init__(self, verbose, heaps_scan = False):
+	def __init__(self, verbose, heaps_scan):
 		LogBpHook.__init__(self)
 		self.filename = None
 		self.verbose = verbose
@@ -290,19 +286,20 @@ class Hooker(LogBpHook):
 	def check_java_class(self, imm, buf = None, chunk = None, is_addr = False, addr = None):
 		if not is_addr:
 			while MAGIC in buf:
-				imm.flashMessage("[+] Found java class")
 				# find java class MAGIC
 				offset = buf.find(MAGIC)
 				# get java class address
 				class_addr = chunk.addr + offset
 				message = '[+] Found java class at address 0x%08X in heap' % class_addr
 				imm.log(message)
+				imm.flashMessage(message)
 				imm.log('[*] trying to parse java class')
 				# parse java class
 				j_class = self.get_java_class(imm, class_addr)
 				# get last chunk part
 				buf = buf[j_class.size:]
 			else:
+				imm.log("[*] chunk doesn't contain any class file")
 				pass
 		else:
 			message = '[+] Found java class at address 0x%08X in writeable memory' % addr
@@ -318,6 +315,7 @@ class Hooker(LogBpHook):
 			# get all chunks in current heap
 			chunks = pheap.getChunks(0)
 			for chunk in chunks:
+				imm.log('[*] checking chunk at address 0x%08X' % chunk.addr)
 				data = imm.readMemory(chunk.addr, chunk.size)
 				self.check_java_class(imm, buf = data, chunk = chunk)
 
@@ -344,87 +342,66 @@ class Hooker(LogBpHook):
 			self.scan_writeable_memory(imm)
 
 
-class CloseHandle_Hooker(Hooker):
-	def __init__(self, verbose, heaps_scan):
-		Hooker.__init__(self, verbose, heaps_scan)
-
-	def get_call_params(self, regs):
-		hObject = regs['ESP'] + 4
-		return hObject
-
-
-class ReadFile_Hooker(Hooker):
-	def __init__(self, verbose, heaps_scan):
-		Hooker.__init__(self, verbose, heaps_scan)
-
-	def get_call_params(self, regs):
-		hFile = regs['ESP'] + 4
-		lpBuffer = regs['ESP'] + 8
-		nNumberOfBytesToRead = regs['ESP'] + 12
-		lpNumberOfBytesRead = regs['ESP'] + 16
-		lpOverlapped = regs['ESP'] + 20
-		return [hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped]
-
-
-class CreateFileW_Hooker(Hooker):
-	def __init__(self, verbose, heaps_scan):
-		Hooker.__init__(self, verbose, heaps_scan)
-
-	def get_call_params(self, regs):
-		lpFileName = regs['ESP'] + 4
-		dwDesiredAccess = regs['ESP'] + 8
-		dwShareMode = regs['ESP'] + 12
-		lpSecurityAttributes = regs['ESP'] + 16
-		dwCreationDisposition = regs['ESP'] + 20
-		dwFlagsAndAttributes = regs['ESP'] + 24
-		hTemplateFile = regs['ESP'] + 28
-		return [lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile]
-
-
-def init_hooks(imm, args):
-	# check verbosity
-	if '-v' in args:
-		verbose = True
-	else:
-		verbose = False
-	# check heaps scan
-	if '-H' in args:
-		heaps_scan = True
-	else:
-		heaps_scan = False
+def init_hooks(imm, opts):
+	# init default parameters
+	verbose = False
+	heaps_scan = False
 	# collect system functions addresses
 	CreateFileW_addr = imm.getAddress("kernel32.CreateFileW")
 	ReadFile_addr = imm.getAddress("kernel32.ReadFile")
 	CloseHandle_addr = imm.getAddress("kernel32.CloseHandle")
-	# catch CreateFileW calls
-	if args[0] == '-c':
-		whook = CreateFileW_Hooker(verbose, heaps_scan)
-		whook.add("bp_on_kernel32.CreateFileW", CreateFileW_addr)
-	# catch ReadFile calls
-	if args[0] == '-r':
-		rhook = ReadFile_Hooker(verbose, heaps_scan)
-		rhook.add("bp_on_kernel32.ReadFile", ReadFile_addr)
-	# catch CloseHandle calls
-	if args[0] == '-f':
-		chook = CloseHandle_Hooker(verbose, heaps_scan)
-		chook.add("bp_on_kernel32.CloseHandle", CloseHandle_addr)
+
+	for o, _ in opts:
+		# parse arguments
+		if o == '-v':
+		# enable verbosity
+			verbose = True
+			imm.log('[*] verbosity is enable')
+		elif o == '-H':
+		# enable heaps scan mode
+			heaps_scan = True
+			imm.log('[*] heaps scan mode is enabled')
+		elif o == '-c':
+			# catch CreateFileW calls
+			whook = Hooker(verbose, heaps_scan)
+			whook.add("bp_on_kernel32.CreateFileW", CreateFileW_addr)
+			imm.log('[*] CreateFileW hook')
+		elif o == '-r':
+			# catch ReadFile calls
+			rhook = Hooker(verbose, heaps_scan)
+			rhook.add("bp_on_kernel32.ReadFile", ReadFile_addr)
+			imm.log('[*] ReadFile hook')
+		elif o == '-C':
+			# catch CloseHandle calls
+			chook = Hooker(verbose, heaps_scan)
+			chook.add("bp_on_kernel32.CloseHandle", CloseHandle_addr)
+			imm.log('[*] CloseHandle hook')
+		else:
+			raise Exception('[-] unsupported argument')
 
 
 def usage(imm):
-	imm.log(10 * '#' + ' Immunity Debugger java dumper ' + 10 * '#'		 )
-	imm.log("!java-dumper [-c] [-r] [-f] [-H] [-v]              		")
-	imm.log("              -c   checks CreateFileW calls               	")
-	imm.log("              -r   checks ReadFile calls       			")
-	imm.log("              -f   checks CloseHandle calls     			")
-	imm.log("              -v	enable verbosity     					")
-	imm.log("			   -H 	heaps scan 								")
+	imm.log("########## Immunity Debugger java dumper ##########		")
+	imm.log("!java-dumper	[options] [hooks]						    ")
+	imm.log("options:		-v 	-H						    			")
+	imm.log("              	-v	enable verbosity     					")
+	imm.log("			   	-H  heaps scan 								")
+	imm.log("hooks:			-c 	-r 	-C						    		")
+	imm.log("              	-c  checks CreateFileW calls               	")
+	imm.log("              	-r  checks ReadFile calls       			")
+	imm.log("              	-C  checks CloseHandle calls     			")
 
 
 def main(args): 
 	imm = immlib.Debugger()
-	if not args and len(args) != 1:
+	if not args:
 		usage(imm)
 		return "[-] no arguments"
 	else:
-		init_hooks(imm, args)
+		try:
+			opts, _ = getopt.getopt(args, "crCvH")
+		except getopt.GetoptError:
+			usage(imm)
+			return "[-] arguments error"
+	init_hooks(imm, opts)
 	return "[+] done"
