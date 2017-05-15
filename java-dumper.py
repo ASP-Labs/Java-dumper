@@ -381,15 +381,15 @@ def init_hooks(imm, opts):
 
 
 def usage(imm):
-	imm.log("########## Immunity Debugger java dumper ##########		")
-	imm.log("!java-dumper	[options] [hooks]						    ")
-	imm.log("options:		-v 	-H						    			")
-	imm.log("              	-v	enable verbosity     					")
-	imm.log("			   	-H  heaps scan 								")
-	imm.log("hooks:			-c 	-r 	-C						    		")
-	imm.log("              	-c  checks CreateFileW calls               	")
-	imm.log("              	-r  checks ReadFile calls       			")
-	imm.log("              	-C  checks CloseHandle calls     			")
+	imm.log("##########	Immunity Debugger java dumper ##########		")
+	imm.log("!java-dumper	[options]	[hooks]							")
+	imm.log("options:		-v	-H										")
+	imm.log("				-v	enable verbosity						")
+	imm.log("				-H	heaps scan 								")
+	imm.log("hooks:			-c -r -C									")
+	imm.log("				-c checks CreateFileW calls					")
+	imm.log("				-r checks ReadFile calls					")
+	imm.log("				-C checks CloseHandle calls					")
 
 
 def main(args): 
